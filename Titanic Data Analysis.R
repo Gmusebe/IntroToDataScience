@@ -1,28 +1,3 @@
-#
-# Copyright 2012 Dave Langer
-#    
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-# 
-#    http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# 
-
-
-
-#
-# This R source code file corresponds to video 2 of the YouTube series
-# "Introduction to Data Science with R" located at the following URL:
-#     https://www.youtube.com/watch?v=u6sahb7Hmog
-#
-
-
 # Load raw data
 train <- read.csv("train.csv", header = TRUE)
 test <- read.csv("test.csv", header = TRUE)
@@ -34,7 +9,7 @@ test <- add_column(test, data.frame(Survived = rep("None", nrow(test))), .after 
 # Combine data sets
 data.combined <- rbind(train, test)
 
-# A bit about R data types (e.g., factors)
+# A bit about R data types
 str(data.combined)
 
 data.combined$Survived <- as.factor(data.combined$Survived)
@@ -46,19 +21,17 @@ visdat::vis_dat(data.combined)
 #  Check the measure of data missing
 naniar::vis_miss(data.combined)
 
-# Take a look at gross survival rates
+# Primary View
+# Gross survival rates
 library(epiDisplay)
 tab1(data.combined$Survived, col=c("chocolate","brown1","brown4"))
+# Most people perished than survived.
 
-
-# Distribution across classes
+# Distribution of persons across classes
 tab1(data.combined$Pclass, col=c("chocolate","brown1","brown4"))
 
 
-# Load up ggplot2 package to use for visualizations
 library(ggplot2)
-
-
 # Hypothesis - Rich folks survived at a higer rate
 train$Pclass <- as.factor(train$Pclass)
 ggplot(train, aes(x = Pclass, fill = factor(Survived))) +
@@ -68,44 +41,21 @@ ggplot(train, aes(x = Pclass, fill = factor(Survived))) +
   labs(fill = "Survived") 
 
 
-# Examine the first few names in the training data set
+# Examine Names in the training data set
 train$Name <- as.character(train$Name)
-head(train$Name)
-
-
-# How many unique names are there across both train & test?
+# How many unique names are there both in the train & test data?
 length(unique(data.combined$Name))
 
-
-# Two duplicate names, take a closer look
-# First, get the duplicate names and store them as a vector
-dup.names <- as.character(data.combined[which(duplicated(data.combined$Name)), "Name"])
-# There are no duplicates in the data
-
-
-# What is up with the 'Miss.' and 'Mr.' thing?
+# The 'Miss.' and 'Mr.' ?
 # Expand upon the realtionship between `Survived` and `Pclass` by adding the new `Title` variable to the
 # data set and then explore a potential 3-dimensional relationship.
 library(stringr)
-Title <- as.factor(str_extract(string = data.combined$Name, pattern = "(Mr|Master|Mrs|Miss)\\."))
+Title <- (str_extract(string = data.combined$Name, pattern = "(Mr|Master|Mrs|Miss)\\."))
 data.combined <- add_column(data.combined, Title, .after = 3)
+data.combined$Title[which(is.na(data.combined$Title))] <- "Other"
+data.combined$Title <- as.factor(data.combined$Title)
 
-# Any correlation with other variables (e.g., sibsp[Siblings/Spouse])?
-misses <- data.combined[which(str_detect(data.combined$Name, "Miss.")),]
-misses[1:5,]
-
-
-# Hypothesis - Name titles correlate with age
-mrses <- data.combined[which(data.combined$Title == "Mrs."), ]
-mrses[1:5,]
-
-
-# Check out males to see if pattern continues
-males <- data.combined[which(data.combined$Sex == "male"), ]
-males[1:5,]
-
-# Since we only have survived lables for the train set, only use the
-# first 891 rows
+# Use the first 891 rows that  have surviavl labels
 ggplot(data.combined[1:891,], aes(x = Title, fill = Survived)) +
   geom_bar() +
   facet_wrap(~Pclass) + 
@@ -114,7 +64,8 @@ ggplot(data.combined[1:891,], aes(x = Title, fill = Survived)) +
   ylab("Total Count") +
   labs(fill = "Survived")
 
-# What's the distribution of females to males across train & test?
+
+# The distribution of females to males across train & test?
 tab1(data.combined$Sex, col=c("chocolate","brown1"))
 
 
@@ -133,7 +84,7 @@ ggplot(data.combined[1:891,], aes(x = Sex, fill = Survived)) +
 # look at the distibutions of age over entire data set
 summary(data.combined$Age)
 summary(data.combined[1:891,"Age"])
-# Most of the age data is missing in he train data
+# Most of the age data is missing in the train data
 
 
 # Just to be thorough, take a look at survival rates broken out by sex, pclass, and age
@@ -144,43 +95,15 @@ ggplot(data.combined[1:891,], aes(x = Age, fill = Survived)) +
   ylab("Total Count")
 # There is a decrease in survival rates by gender across the Pclass
 
-# Validate that "Master." is a good proxy for male children
-boys <- data.combined[which(data.combined$Title == "Master."),]
-summary(boys$Age)
 
-
-# We know that "Miss." is more complicated, let's examine further
-misses <- data.combined[which(data.combined$Title == "Miss."),]
-summary(misses$Age)
-# We have a mixture of children and adults, 25% being less than 15 years.
-# The miss's age data seems to be skewed to the right. Meaning most miss's are adults.
-ggplot(misses[misses$Survived != "None",], aes(x = Age, fill = Survived)) +
-  facet_wrap(~Pclass) +
-  geom_histogram(binwidth = 5) +
-  ggtitle("Age for 'Miss.' by Pclass") + 
-  xlab("Age") +
-  ylab("Total Count")
-
-
-# OK, appears female children may have different survival rate, 
-# could be a candidate for feature engineering later
-misses.alone <- misses[which(misses$SibSp == 0 & misses$Parch == 0),]
-summary(misses.alone$Age)
-length(which(misses.alone$Age <= 14.5))
-
-
-# Move on to the sibsp variable, summarize the variable
+# SibSp variable, summarize the variable
 summary(data.combined$SibSp)
-
-
-# Can we treat as a factor?
 length(unique(data.combined$SibSp))
-
-
+# Change to factor
 data.combined$SibSp <- as.factor(data.combined$SibSp)
 
 
-# We believe title is predictive. Visualize survival reates by sibsp, pclass, and title
+# We believe title is predictive. Visualize Survival rates by SibSp, Pclass, and Title
 ggplot(data.combined[1:891,], aes(x = SibSp, fill = Survived)) +
   geom_bar() +
   facet_wrap(~ Pclass + Title) + 
@@ -191,7 +114,7 @@ ggplot(data.combined[1:891,], aes(x = SibSp, fill = Survived)) +
   labs(fill = "Survived")
 
 
-# Treat the parch vaiable as a factor and visualize
+# Treat the Parch variable as a factor and visualize
 data.combined$Parch <- as.factor(data.combined$Parch)
 ggplot(data.combined[1:891,], aes(x = Parch, fill = Survived)) +
   geom_bar() +
@@ -220,3 +143,30 @@ ggplot(data.combined[1:891,], aes(x = family.size, fill = Survived)) +
   ylim(0,300) +
   labs(fill = "Survived")
   # The greater the family size the less the survival rate.
+# From the above analysis we will use the Pclass, Title(Combining Sex and Age), SibSp, Parch and family.size for the exploratory analysis.
+
+# Exploratory Modeling
+library(tidyverse)
+library(caret)
+library(randomForest)
+
+ForestData <- subset(data.combined, select = -c(Parch,PassengerId, Name, Sex, Age, Ticket, Fare, Cabin, Embarked))
+
+set.seed(1234)
+Train.data <- droplevels(ForestData[ForestData$Survived != "None", ])
+model <- train(Survived~.,data = Train.data, method = "rf",
+               trControl = trainControl("cv", number = 10),
+               importance = TRUE)
+
+
+model$finalModel
+# Accuracy of 0.8215
+
+
+Test.data <- droplevels(ForestData[ForestData$Survived == "None", ])
+Test.data$Survived <- NULL
+predict <- model %>% predict(Test.data)
+
+My_Pred <- data.frame(PassengerId = rep(892:1309), Survived = predict)
+
+write.csv(My_Pred, file = "RF_SUB_20200526_1.csv", row.names = FALSE)
