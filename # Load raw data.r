@@ -196,15 +196,14 @@ library(randomForest)
 
 features <- c("Survived", "Pclass", "Title", "family.size", "ticket.party.size", "avg.fare")
 Train.data <- droplevels(data.combined[1:891, features])
-Test.data <- data.combined[892:1309, features] 
-Test.data$Survived <- NULL
+Test.data <- data.combined[892:1309, c("Pclass", "Title", "family.size", "ticket.party.size", "avg.fare")] 
 
-train.Control <- trainControl(method = "cv", number = 100)
-set.seed(1234)
+train.Control <- trainControl(method = "LOOCV")
 model <- train(Survived ~., data = Train.data, method = "rf", trControl = train.Control)
-model$finalModel
+print(model)
+
 predict <- model %>% predict(Test.data)
 
 My_Pred <- data.frame(PassengerId = rep(892:1309), Survived = predict)
 
-write.csv(My_Pred, file = "RF_SUB_20200602_5.csv", row.names = FALSE)
+write.csv(My_Pred, file = "RF_SUB_20200602_6.csv", row.names = FALSE)
